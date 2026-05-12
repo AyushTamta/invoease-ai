@@ -7,7 +7,37 @@ import {
 
 import { LinearGradient } from 'expo-linear-gradient'
 
+import * as WebBrowser from 'expo-web-browser'
+import * as Linking from 'expo-linking'
+
+import { supabase } from '../src/lib/supabase'
+
+WebBrowser.maybeCompleteAuthSession()
+
 export default function AuthScreen() {
+  const handleGoogleLogin = async () => {
+    const redirectTo = Linking.createURL('/')
+
+    const { data, error } =
+      await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo,
+        },
+      })
+
+    if (data?.url) {
+      await WebBrowser.openAuthSessionAsync(
+        data.url,
+        redirectTo
+      )
+    }
+
+    if (error) {
+      console.log(error.message)
+    }
+  }
+
   return (
     <LinearGradient
       colors={['#0B0F1A', '#111827', '#1E1B4B']}
@@ -31,7 +61,10 @@ export default function AuthScreen() {
       </View>
 
       <View style={styles.bottomSection}>
-        <TouchableOpacity style={styles.googleButton}>
+        <TouchableOpacity
+          style={styles.googleButton}
+          onPress={handleGoogleLogin}
+        >
           <Text style={styles.googleText}>
             Continue with Google
           </Text>
@@ -97,10 +130,6 @@ const styles = StyleSheet.create({
     paddingVertical: 18,
     borderRadius: 22,
     alignItems: 'center',
-    shadowColor: '#8B5CF6',
-    shadowOpacity: 0.4,
-    shadowRadius: 20,
-    elevation: 10,
   },
 
   googleText: {
