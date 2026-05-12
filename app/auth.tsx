@@ -5,71 +5,114 @@ import {
   TouchableOpacity,
 } from 'react-native'
 
+import { LinearGradient } from 'expo-linear-gradient'
+
 export default function AuthScreen() {
   return (
-    <View style={styles.container}>
-      <View>
-        <Text style={styles.logo}>InvoEase.ai</Text>
+    <LinearGradient
+      colors={['#0B0F1A', '#111827', '#1E1B4B']}
+      style={styles.container}
+    >
+      <View style={styles.topSection}>
+        <View style={styles.badge}>
+          <Text style={styles.badgeText}>
+            InvoEase.ai
+          </Text>
+        </View>
 
         <Text style={styles.heading}>
-          AI-powered invoice insights
+          AI-powered{'\n'}invoice insights
         </Text>
 
         <Text style={styles.subheading}>
-          Scan receipts. Let AI organize the rest.
+          Scan receipts. Track spending.
+          Let AI organize everything beautifully.
         </Text>
       </View>
 
-      <TouchableOpacity style={styles.googleButton}>
-        <Text style={styles.googleText}>
-          Continue with Google
+      <View style={styles.bottomSection}>
+        <TouchableOpacity style={styles.googleButton}>
+          <Text style={styles.googleText}>
+            Continue with Google
+          </Text>
+        </TouchableOpacity>
+
+        <Text style={styles.footerText}>
+          By continuing, you agree to our Terms
+          and Privacy Policy.
         </Text>
-      </TouchableOpacity>
-    </View>
+      </View>
+    </LinearGradient>
   )
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0B0F1A',
     paddingHorizontal: 24,
     justifyContent: 'space-between',
-    paddingTop: 140,
-    paddingBottom: 60,
+    paddingTop: 120,
+    paddingBottom: 50,
   },
 
-  logo: {
-    color: '#8B5CF6',
-    fontSize: 20,
-    fontWeight: '700',
-    marginBottom: 40,
+  topSection: {
+    gap: 28,
+  },
+
+  badge: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(139,92,246,0.15)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 999,
+  },
+
+  badgeText: {
+    color: '#A78BFA',
+    fontSize: 14,
+    fontWeight: '600',
   },
 
   heading: {
     color: 'white',
-    fontSize: 42,
+    fontSize: 48,
     fontWeight: '700',
-    lineHeight: 52,
+    lineHeight: 58,
+    letterSpacing: -1.5,
   },
 
   subheading: {
     color: '#9CA3AF',
     fontSize: 18,
-    marginTop: 20,
-    lineHeight: 28,
+    lineHeight: 30,
+    maxWidth: '90%',
+  },
+
+  bottomSection: {
+    gap: 18,
   },
 
   googleButton: {
     backgroundColor: '#8B5CF6',
     paddingVertical: 18,
-    borderRadius: 18,
+    borderRadius: 22,
     alignItems: 'center',
+    shadowColor: '#8B5CF6',
+    shadowOpacity: 0.4,
+    shadowRadius: 20,
+    elevation: 10,
   },
 
   googleText: {
     color: 'white',
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '600',
+  },
+
+  footerText: {
+    color: '#6B7280',
+    fontSize: 13,
+    textAlign: 'center',
+    lineHeight: 20,
   },
 })
