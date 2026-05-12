@@ -8,7 +8,8 @@ import {
 import { LinearGradient } from 'expo-linear-gradient'
 
 import * as WebBrowser from 'expo-web-browser'
-import * as Linking from 'expo-linking'
+
+import { router } from 'expo-router'
 
 import { supabase } from '../src/lib/supabase'
 
@@ -16,25 +17,40 @@ WebBrowser.maybeCompleteAuthSession()
 
 export default function AuthScreen() {
   const handleGoogleLogin = async () => {
-    const redirectTo = Linking.createURL('/')
+    try {
+      const redirectTo =
+        'https://nnrghpfcgcemnvahcnxf.supabase.co/auth/v1/callback'
 
-    const { data, error } =
-      await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo,
-        },
-      })
+      const { data, error } =
+        await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo,
+            skipBrowserRedirect: true,
+          },
+        })
 
-    if (data?.url) {
-      await WebBrowser.openAuthSessionAsync(
-        data.url,
-        redirectTo
-      )
-    }
+      if (error) {
+        console.log(error.message)
+        return
+      }
 
-    if (error) {
-      console.log(error.message)
+      if (data?.url) {
+        await WebBrowser.openAuthSessionAsync(
+          data.url,
+          redirectTo
+        )
+
+        const {
+          data: { session },
+        } = await supabase.auth.getSession()
+
+        if (session) {
+          router.replace('/home')
+        }
+      }
+    } catch (err) {
+      console.log(err)
     }
   }
 
