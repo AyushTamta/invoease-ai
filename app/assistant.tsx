@@ -5,308 +5,410 @@ import {
   ScrollView,
   TextInput,
   TouchableOpacity,
-  ActivityIndicator,
+  useWindowDimensions,
 } from 'react-native'
 
 import {
-  useState,
   useEffect,
+  useState,
 } from 'react'
 
 import {
-  LinearGradient,
-} from 'expo-linear-gradient'
+  supabase,
+} from '../lib/supabase'
 
-import {
-  fetchInvoices,
-} from '../utils/fetchInvoices'
+import Sidebar from '../components/Sidebar'
 
 export default function Assistant() {
 
-  const [question, setQuestion] =
-    useState('')
+  const { width } =
+    useWindowDimensions()
 
-  const [loading, setLoading] =
-    useState(false)
-
-  const [invoices, setInvoices] =
-    useState<any[]>([])
+  const isDesktop =
+    width > 900
 
   const [messages, setMessages] =
     useState<any[]>([])
 
+  const [question, setQuestion] =
+    useState('')
+
+  const [invoices, setInvoices] =
+    useState<any[]>([])
+
   useEffect(() => {
 
-    loadInvoices()
+    fetchInvoices()
 
   }, [])
 
-  const loadInvoices = async () => {
+  const fetchInvoices = async () => {
 
-    const data =
-      await fetchInvoices()
+    const { data, error } =
+      await supabase
+        .from('invoices')
+        .select('*')
 
-    setInvoices(data)
+    if (error) {
+
+      console.log(error)
+
+      return
+    }
+
+    setInvoices(data || [])
   }
 
-  const askFinanceAI = async (
-    customQuestion?: string
+  const extractAmount = (
+    text: string
   ) => {
 
-    try {
+    if (!text) return 0
 
-      const finalQuestion =
-        customQuestion || question
+    const match =
+      text.match(/\d+/g)
 
-      if (!finalQuestion.trim()) return
+    if (!match) return 0
 
-      setLoading(true)
+    return parseInt(
+      match.join('')
+    )
+  }
 
-      setQuestion('')
+  const askAssistant = async () => {
 
-      const updatedMessages = [
+    if (!question.trim()) return
 
-        ...messages,
+    const userMessage = {
+      role: 'user',
+      text: question,
+    }
 
-        {
-          role: 'user',
-          content:
-          finalQuestion,
-        }
+    setMessages(prev => [
+      ...prev,
+      userMessage,
+    ])
 
-      ]
+    const q =
+      question.toLowerCase()
 
-      setMessages(updatedMessages)
+    let answer =
+      'I could not fully understand the question.'
 
-      const response =
-        await fetch(
-          'https://invoease-ai-backend.onrender.com/finance-chat',
-          {
-            method: 'POST',
+    const totalSpend =
+      invoices.reduce(
+        (
+          acc,
+          item
+        ) =>
+          acc +
+          extractAmount(
+            item.total_amount
+          ),
+        0
+      )
 
-            headers: {
-              'Content-Type':
-                'application/json',
-            },
+    if (
+      q.includes('food')
+    ) {
 
-            body: JSON.stringify({
-
-              invoices,
-
-              question:
-              finalQuestion,
-
-              messages:
-              updatedMessages,
-            }),
-          }
+      const foodInvoices =
+        invoices.filter(
+          item =>
+            item.category ===
+            'Food'
         )
 
-      const data =
-        await response.json()
+      const total =
+        foodInvoices.reduce(
+          (
+            acc,
+            item
+          ) =>
+            acc +
+            extractAmount(
+              item.total_amount
+            ),
+          0
+        )
 
-      setMessages(prev => [
-
-        ...prev,
-
-        {
-          role: 'assistant',
-          content:
-          data.answer,
-        }
-
-      ])
-
-    } catch (err) {
-
-      console.log(err)
-
-    } finally {
-
-      setLoading(false)
+      answer =
+        `You spent ₹${total} on food expenses.`
     }
+
+    else if (
+      q.includes('travel')
+    ) {
+
+      const travelInvoices =
+        invoices.filter(
+          item =>
+            item.category ===
+            'Travel'
+        )
+
+      const total =
+        travelInvoices.reduce(
+          (
+            acc,
+            item
+          ) =>
+            acc +
+            extractAmount(
+              item.total_amount
+            ),
+          0
+        )
+
+      answer =
+        `You spent ₹${total} on travel expenses.`
+    }
+
+    else if (
+      q.includes(
+        'biggest purchase'
+      )
+    ) {
+
+      const sorted =
+        [...invoices].sort(
+          (a, b) =>
+            extractAmount(
+              b.total_amount
+            ) -
+            extractAmount(
+              a.total_amount
+            )
+        )
+
+      const biggest =
+        sorted[0]
+
+      answer =
+        `Your biggest purchase was ${biggest.store_name} for ${biggest.total_amount}.`
+    }
+
+    else if (
+      q.includes(
+        'total spend'
+      )
+    ) {
+
+      answer =
+        `Your total recorded spending is ₹${totalSpend}.`
+    }
+
+    else if (
+      q.includes(
+        'recurring'
+      )
+    ) {
+
+      const merchantMap: any =
+        {}
+
+      invoices.forEach(
+        invoice => {
+
+          merchantMap[
+            invoice.store_name
+          ] =
+            (
+              merchantMap[
+                invoice.store_name
+              ] || 0
+            ) + 1
+        }
+      )
+
+      const topMerchant =
+        Object.entries(
+          merchantMap
+        ).sort(
+          (
+            a: any,
+            b: any
+          ) => b[1] - a[1]
+        )[0]
+
+      answer =
+        `${topMerchant[0]} is your most recurring merchant.`
+    }
+
+    else if (
+      q.includes(
+        'highest category'
+      )
+    ) {
+
+      const categoryMap: any =
+        {}
+
+      invoices.forEach(
+        invoice => {
+
+          categoryMap[
+            invoice.category
+          ] =
+            (
+              categoryMap[
+                invoice.category
+              ] || 0
+            ) +
+            extractAmount(
+              invoice.total_amount
+            )
+        }
+      )
+
+      const topCategory =
+        Object.entries(
+          categoryMap
+        ).sort(
+          (
+            a: any,
+            b: any
+          ) => b[1] - a[1]
+        )[0]
+
+      answer =
+        `${topCategory[0]} is your highest spending category.`
+    }
+
+    const aiMessage = {
+      role: 'ai',
+      text: answer,
+    }
+
+    setMessages(prev => [
+      ...prev,
+      aiMessage,
+    ])
+
+    setQuestion('')
   }
 
   return (
-    <ScrollView
-      style={styles.container}
-      showsVerticalScrollIndicator={
-        false
-      }
+
+    <View
+      style={{
+        flex: 1,
+        flexDirection:
+          isDesktop
+            ? 'row'
+            : 'column',
+      }}
     >
 
-      <Text style={styles.logo}>
-        InvoEase AI
-      </Text>
+      {isDesktop && <Sidebar />}
 
-      <Text style={styles.heading}>
-        Finance{'\n'}
-        Assistant
-      </Text>
+      <View style={styles.container}>
 
-      <Text style={styles.subtitle}>
-        Ask AI about your spending,
-        invoices and financial habits.
-      </Text>
-
-      <LinearGradient
-        colors={[
-          '#8B5CF6',
-          '#6D28D9',
-        ]}
-        style={styles.heroCard}
-      >
-
-        <Text style={styles.heroTitle}>
-          AI Financial Intelligence
+        <Text style={styles.logo}>
+          InvoEase AI
         </Text>
 
-        <Text style={styles.heroSub}>
-          Analyze expenses, merchants,
-          trends and financial behavior.
+        <Text style={styles.heading}>
+          Finance Assistant
         </Text>
 
-      </LinearGradient>
-
-      <Text style={styles.sectionTitle}>
-        Suggested Questions
-      </Text>
-
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={
-          false
-        }
-      >
-
-        <TouchableOpacity
-          style={styles.promptChip}
-          onPress={() =>
-            askFinanceAI(
-              'How much did I spend on food?'
-            )
-          }
-        >
-          <Text style={styles.promptText}>
-            Food Spending
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.promptChip}
-          onPress={() =>
-            askFinanceAI(
-              'Which merchant do I use most?'
-            )
-          }
-        >
-          <Text style={styles.promptText}>
-            Top Merchant
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.promptChip}
-          onPress={() =>
-            askFinanceAI(
-              'Did my spending increase this month?'
-            )
-          }
-        >
-          <Text style={styles.promptText}>
-            Spending Trends
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.promptChip}
-          onPress={() =>
-            askFinanceAI(
-              'What is my biggest expense category?'
-            )
-          }
-        >
-          <Text style={styles.promptText}>
-            Expense Categories
-          </Text>
-        </TouchableOpacity>
-
-      </ScrollView>
-
-      <Text style={styles.sectionTitle}>
-        Ask Finance AI
-      </Text>
-
-      <TextInput
-        placeholder="Ask anything about your finances..."
-        placeholderTextColor="#6B7280"
-        value={question}
-        onChangeText={setQuestion}
-        style={styles.input}
-        multiline
-      />
-
-      <TouchableOpacity
-        style={styles.askButton}
-        onPress={() =>
-          askFinanceAI()
-        }
-      >
-
-        <Text style={styles.askText}>
-          {loading
-            ? 'Thinking...'
-            : 'Ask AI'}
+        <Text style={styles.subheading}>
+          Ask questions about your expenses using AI.
         </Text>
 
-      </TouchableOpacity>
+        <View style={styles.promptRow}>
 
-      {loading && (
+          {[
+            'How much did I spend on food?',
+            'What was my biggest purchase?',
+            'What is my highest category?',
+            'What are my recurring expenses?',
+          ].map(prompt => (
 
-        <View style={styles.loaderBox}>
-
-          <ActivityIndicator
-            size="large"
-            color="#8B5CF6"
-          />
-
-          <Text style={styles.loaderText}>
-            AI is analyzing your finances...
-          </Text>
-
-        </View>
-      )}
-
-      <View style={styles.chatContainer}>
-
-        {messages.map(
-          (
-            message,
-            index
-          ) => (
-
-            <View
-              key={index}
-              style={
-                message.role === 'user'
-                ? styles.userBubble
-                : styles.aiBubble
+            <TouchableOpacity
+              key={prompt}
+              style={styles.promptChip}
+              onPress={() =>
+                setQuestion(prompt)
               }
             >
 
               <Text
-                style={styles.chatText}
+                style={styles.promptText}
               >
-                {message.content}
+                {prompt}
               </Text>
 
-            </View>
-          )
-        )}
+            </TouchableOpacity>
+          ))}
+
+        </View>
+
+        <ScrollView
+          style={styles.chatBox}
+          showsVerticalScrollIndicator={
+            false
+          }
+        >
+
+          {messages.map(
+            (
+              msg,
+              index
+            ) => (
+
+              <View
+                key={index}
+                style={[
+                  styles.messageBubble,
+
+                  msg.role ===
+                  'user'
+
+                    ? styles.userBubble
+
+                    : styles.aiBubble,
+                ]}
+              >
+
+                <Text
+                  style={
+                    styles.messageText
+                  }
+                >
+                  {msg.text}
+                </Text>
+
+              </View>
+            )
+          )}
+
+        </ScrollView>
+
+        <TextInput
+          placeholder="Ask your finance AI..."
+          placeholderTextColor="#6B7280"
+          value={question}
+          onChangeText={setQuestion}
+          style={styles.input}
+        />
+
+        <TouchableOpacity
+          style={styles.askButton}
+          onPress={askAssistant}
+        >
+
+          <Text
+            style={styles.askText}
+          >
+            Ask AI
+          </Text>
+
+        </TouchableOpacity>
 
       </View>
 
-    </ScrollView>
+    </View>
   )
 }
 
@@ -327,44 +429,22 @@ const styles = StyleSheet.create({
 
   heading: {
     color: 'white',
-    fontSize: 56,
-    lineHeight: 58,
+    fontSize: 48,
     fontWeight: '900',
-    marginTop: 16,
+    marginTop: 18,
   },
 
-  subtitle: {
+  subheading: {
     color: '#9CA3AF',
     fontSize: 16,
     lineHeight: 28,
-    marginTop: 20,
+    marginTop: 16,
   },
 
-  heroCard: {
-    marginTop: 36,
-    borderRadius: 34,
-    padding: 28,
-  },
-
-  heroTitle: {
-    color: 'white',
-    fontSize: 24,
-    fontWeight: '800',
-  },
-
-  heroSub: {
-    color: 'rgba(255,255,255,0.85)',
-    marginTop: 12,
-    lineHeight: 24,
-    fontSize: 15,
-  },
-
-  sectionTitle: {
-    color: 'white',
-    fontSize: 24,
-    fontWeight: '900',
-    marginTop: 40,
-    marginBottom: 20,
+  promptRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 28,
   },
 
   promptChip: {
@@ -373,76 +453,66 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 999,
     marginRight: 12,
+    marginBottom: 12,
   },
 
   promptText: {
     color: 'white',
+    fontSize: 13,
     fontWeight: '700',
   },
 
-  input: {
-    backgroundColor: '#111827',
+  chatBox: {
+    flex: 1,
+    marginTop: 24,
+  },
+
+  messageBubble: {
+    padding: 18,
     borderRadius: 24,
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-    color: 'white',
-    minHeight: 140,
-    textAlignVertical: 'top',
-    fontSize: 16,
-    marginTop: 10,
-  },
-
-  askButton: {
-    backgroundColor: '#8B5CF6',
-    borderRadius: 24,
-    paddingVertical: 20,
-    alignItems: 'center',
-    marginTop: 20,
-  },
-
-  askText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '800',
-  },
-
-  loaderBox: {
-    marginTop: 34,
-    alignItems: 'center',
-  },
-
-  loaderText: {
-    color: '#A78BFA',
-    marginTop: 14,
-    fontSize: 15,
-  },
-
-  chatContainer: {
-    marginTop: 36,
-    marginBottom: 100,
+    marginBottom: 16,
+    maxWidth: '80%',
   },
 
   userBubble: {
     backgroundColor: '#8B5CF6',
-    padding: 20,
-    borderRadius: 24,
     alignSelf: 'flex-end',
-    marginBottom: 16,
-    maxWidth: '85%',
   },
 
   aiBubble: {
     backgroundColor: '#111827',
-    padding: 20,
-    borderRadius: 24,
     alignSelf: 'flex-start',
-    marginBottom: 16,
-    maxWidth: '85%',
   },
 
-  chatText: {
+  messageText: {
     color: 'white',
+    lineHeight: 24,
     fontSize: 15,
-    lineHeight: 26,
   },
+
+  input: {
+    backgroundColor: '#111827',
+    borderRadius: 22,
+    padding: 18,
+    color: 'white',
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: '#1F2937',
+  },
+
+  askButton: {
+    backgroundColor: '#8B5CF6',
+    borderRadius: 22,
+    paddingVertical: 18,
+    alignItems: 'center',
+    marginTop: 16,
+    marginBottom: 40,
+  },
+
+  askText: {
+    color: 'white',
+    fontWeight: '800',
+    fontSize: 16,
+  },
+
 })

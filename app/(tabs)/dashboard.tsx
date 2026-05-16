@@ -5,6 +5,8 @@ import {
   ScrollView,
   ActivityIndicator,
   Dimensions,
+  useWindowDimensions,
+  TouchableOpacity,
 } from 'react-native'
 
 import {
@@ -25,10 +27,18 @@ import {
   supabase,
 } from '../../lib/supabase'
 
+import Sidebar from '../../components/Sidebar'
+
 const screenWidth =
   Dimensions.get('window').width
 
 export default function Dashboard() {
+
+  const { width } =
+    useWindowDimensions()
+
+  const isDesktop =
+    width > 900
 
   const [loading, setLoading] =
     useState(true)
@@ -294,226 +304,175 @@ export default function Dashboard() {
   }
 
   return (
-    <ScrollView
-      style={styles.container}
-      showsVerticalScrollIndicator={
-        false
-      }
+
+    <View
+      style={{
+        flex: 1,
+        flexDirection:
+          isDesktop
+            ? 'row'
+            : 'column',
+      }}
     >
 
-      <Text style={styles.logo}>
-        InvoEase AI
-      </Text>
+      {isDesktop && <Sidebar />}
 
-      <Text style={styles.heading}>
-        Financial Insights
-      </Text>
-
-      <LinearGradient
-        colors={[
-          '#8B5CF6',
-          '#6D28D9',
-        ]}
-        style={styles.heroCard}
+      <ScrollView
+        style={styles.container}
+        showsVerticalScrollIndicator={
+          false
+        }
       >
 
-        <Text style={styles.heroTitle}>
-          Total Spend
+        <Text style={styles.logo}>
+          InvoEase AI
         </Text>
 
-        <Text style={styles.heroAmount}>
-          ₹{totalSpend}
+        <Text style={styles.heading}>
+          Financial Insights
         </Text>
 
-      </LinearGradient>
+        <LinearGradient
+          colors={[
+            '#8B5CF6',
+            '#6D28D9',
+          ]}
+          style={styles.heroCard}
+        >
 
-      <View style={styles.grid}>
-
-        <View style={styles.card}>
-          <Text style={styles.cardLabel}>
-            Invoices
+          <Text style={styles.heroTitle}>
+            Total Spend
           </Text>
 
-          <Text style={styles.cardValue}>
-            {invoiceCount}
-          </Text>
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.cardLabel}>
-            Avg Invoice
+          <Text style={styles.heroAmount}>
+            ₹{totalSpend}
           </Text>
 
-          <Text style={styles.cardValue}>
-            ₹{averageInvoice}
-          </Text>
-        </View>
+        </LinearGradient>
 
-        <View style={styles.card}>
-          <Text style={styles.cardLabel}>
-            Top Category
-          </Text>
+        <View style={styles.grid}>
 
-          <Text style={styles.cardValue}>
-            {topCategory}
-          </Text>
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.cardLabel}>
-            Top Merchant
-          </Text>
-
-          <Text style={styles.cardValue}>
-            {topMerchant}
-          </Text>
-        </View>
-
-      </View>
-
-      <Text style={styles.sectionTitle}>
-        Spending Trend
-      </Text>
-
-      {trendData.length > 0 ? (
-
-        <LineChart
-          data={{
-            labels:
-              trendData.map(
-                (_, i) =>
-                  `D${i + 1}`
-              ),
-
-            datasets: [
-              {
-                data: trendData,
-              },
-            ],
-          }}
-          width={screenWidth - 48}
-          height={220}
-          yAxisLabel="₹"
-          chartConfig={{
-            backgroundGradientFrom:
-              '#111827',
-
-            backgroundGradientTo:
-              '#111827',
-
-            decimalPlaces: 0,
-
-            color: opacity =>
-              `rgba(139,92,246,${opacity})`,
-
-            labelColor: opacity =>
-              `rgba(255,255,255,${opacity})`,
-
-            propsForDots: {
-              r: '5',
-            },
-          }}
-          bezier
-          style={styles.chart}
-        />
-
-      ) : null}
-
-      <Text style={styles.sectionTitle}>
-        Expense Categories
-      </Text>
-
-      {categoryData.length > 0 ? (
-
-        <PieChart
-          data={categoryData}
-          width={screenWidth - 48}
-          height={240}
-          accessor="amount"
-          backgroundColor="transparent"
-          chartConfig={{
-            color: opacity =>
-              `rgba(255,255,255,${opacity})`,
-          }}
-          paddingLeft="20"
-          absolute
-        />
-
-      ) : null}
-
-      <Text style={styles.sectionTitle}>
-        AI Insights
-      </Text>
-
-      {aiInsights.map(
-        (
-          insight,
-          index
-        ) => (
-
-          <View
-            key={index}
-            style={styles.insightCard}
-          >
-
-            <Text
-              style={styles.insightText}
-            >
-              {insight}
+          <View style={styles.card}>
+            <Text style={styles.cardLabel}>
+              Invoices
             </Text>
 
+            <Text style={styles.cardValue}>
+              {invoiceCount}
+            </Text>
           </View>
-        )
-      )}
 
-      <Text style={styles.sectionTitle}>
-        Recent Invoices
-      </Text>
+          <View style={styles.card}>
+            <Text style={styles.cardLabel}>
+              Avg Invoice
+            </Text>
 
-      {invoices.map(
-        (
-          invoice,
-          index
-        ) => (
+            <Text style={styles.cardValue}>
+              ₹{averageInvoice}
+            </Text>
+          </View>
 
-          <View
-            key={index}
-            style={styles.invoiceCard}
-          >
+          <View style={styles.card}>
+            <Text style={styles.cardLabel}>
+              Top Category
+            </Text>
 
-            <View>
+            <Text style={styles.cardValue}>
+              {topCategory}
+            </Text>
+          </View>
+
+          <View style={styles.card}>
+            <Text style={styles.cardLabel}>
+              Top Merchant
+            </Text>
+
+            <Text style={styles.cardValue}>
+              {topMerchant}
+            </Text>
+          </View>
+
+        </View>
+
+        <Text style={styles.sectionTitle}>
+          AI Insights
+        </Text>
+
+        {aiInsights.map(
+          (
+            insight,
+            index
+          ) => (
+
+            <View
+              key={index}
+              style={styles.insightCard}
+            >
 
               <Text
-                style={styles.invoiceStore}
+                style={styles.insightText}
               >
-                {
-                  invoice.store_name
-                }
-              </Text>
-
-              <Text
-                style={
-                  styles.invoiceCategory
-                }
-              >
-                {invoice.category}
+                {insight}
               </Text>
 
             </View>
+          )
+        )}
 
-            <Text
-              style={styles.invoiceAmount}
+        <Text style={styles.sectionTitle}>
+          Recent Invoices
+        </Text>
+
+        {invoices.map(
+          (
+            invoice,
+            index
+          ) => (
+
+            <TouchableOpacity
+              key={index}
+              style={styles.invoiceCard}
             >
-              {
-                invoice.total_amount
-              }
-            </Text>
 
-          </View>
-        )
-      )}
+              <View>
 
-    </ScrollView>
+                <Text
+                  style={
+                    styles.invoiceStore
+                  }
+                >
+                  {
+                    invoice.store_name
+                  }
+                </Text>
+
+                <Text
+                  style={
+                    styles.invoiceCategory
+                  }
+                >
+                  {invoice.category}
+                </Text>
+
+              </View>
+
+              <Text
+                style={
+                  styles.invoiceAmount
+                }
+              >
+                {
+                  invoice.total_amount
+                }
+              </Text>
+
+            </TouchableOpacity>
+          )
+        )}
+
+      </ScrollView>
+
+    </View>
   )
 }
 
@@ -597,10 +556,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     marginTop: 34,
     marginBottom: 20,
-  },
-
-  chart: {
-    borderRadius: 28,
   },
 
   insightCard: {
